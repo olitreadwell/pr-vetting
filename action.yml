@@ -1,0 +1,133 @@
+name: "PR Vetting"
+description: "Vet pull request authors from public GitHub signals and block unknown accounts"
+author: "Oli Treadwell"
+branding:
+  icon: "shield"
+  color: "green"
+
+inputs:
+  token:
+    description: "GitHub token. Defaults to github.token, which has pull-request read/write in the caller."
+    default: ${{ github.token }}
+  repo:
+    description: "Repository as owner/name."
+    default: ${{ github.repository }}
+  pr-number:
+    description: "Pull request number."
+    required: true
+  login:
+    description: "Pull request author login. Use github.event.pull_request.user.login."
+    required: true
+  min-account-age-days:
+    description: "Minimum account age in days for a passing verdict."
+    default: "90"
+  min-in-repo-merged-prs:
+    description: "Minimum merged PRs by the author in this repository."
+    default: "1"
+  min-global-merged-prs:
+    description: "Minimum merged PRs by the author across GitHub."
+    default: "0"
+  require-signed-commits:
+    description: "When true, all PR commits must be verified signatures."
+    default: "false"
+  allowlist:
+    description: "Comma-separated logins that always pass as maintainers."
+    default: ""
+  vetted-label:
+    description: "Label a maintainer can add to bypass the gate after manual review."
+    default: "vetted-contributor"
+  comment-on-open:
+    description: "Comment on the PR with reasons when it needs review."
+    default: "true"
+  fail-open:
+    description: "Treat API errors as pass instead of failing the check."
+    default: "false"
+
+outputs:
+  verdict:
+    description: "One of maintainer, vetted, established, known, review_required, blocked, error."
+  score:
+    description: "Informational 0-100 score."
+  reasons:
+    description: "JSON array of human-readable reasons."
+
+runs:
+  using: composite
+  steps:
+    - name: "Vet the pull request author"
+      id: vet
+      shell: bash
+      env:
+        VET_TOKEN: ${{ inputs.token }}
+        VET_REPO: ${{ inputs.repo }}
+        VET_PR: ${{ inputs.pr-number }}
+        VET_LOGIN: ${{ inputs.login }}
+        VET_MIN_AGE: ${{ inputs.min-account-age-days }}
+        VET_MIN_REPO_PRS: ${{ inputs.min-in-repo-merged-prs }}
+        VET_MIN_GLOBAL_PRS: ${{ inputs.min-global-merged-prs }}
+        VET_REQUIRE_SIGNED: ${{ inputs.require-signed-commits }}
+        VET_ALLOWLIST: ${{ inputs.allowlist }}
+        VET_LABEL: ${{ inputs.vetted-label }}
+        VET_COMMENT: ${{ inputs.comment-on-open }}
+        VET_FAIL_OPEN: ${{ inputs.fail-open }}
+        VET_ACTION: ${{ github.event.action }}
+        PYTHONPATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+
+        result_file="$RUNNER_TEMP/pr-vetting-result.json"
+
+        if [[ -n "$VET_LABEL" ]] && \
+          gh pr view "$VET_PR" --repo "$VET_REPO" --json labels \
+            --jq '.labels[].name' 2>/dev/null | grep -qx "$VET_LABEL"; then
+          echo "verdict=vetted" >> "$GITHUB_OUTPUT"
+          echo "score=100" >> "$GITHUB_OUTPUT"
+          echo 'reasons=["maintainer added the vetted label"]' >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        signed_flag=""
+        if [[ "$VET_REQUIRE_SIGNED" == "true" ]]; then
+          signed_flag="--require-signed-commits"
+        fi
+
+        set +e
+        python3 -m pr_vetting \
+          --repo "$VET_REPO" \
+          --pr "$VET_PR" \
+          --login "$VET_LOGIN" \
+          --token "$VET_TOKEN" \
+          --min-account-age-days "$VET_MIN_AGE" \
+          --min-in-repo-merged-prs "$VET_MIN_REPO_PRS" \
+          --min-global-merged-prs "$VET_MIN_GLOBAL_PRS" \
+          $signed_flag \
+          --allowlist "$VET_ALLOWLIST" \
+          --fail-open "$VET_FAIL_OPEN" \
+          > "$result_file"
+        vet_status=$?
+        set -e
+
+        verdict="$(jq -r .verdict "$result_file")"
+        score="$(jq -r .score "$result_file")"
+        reasons="$(jq -c .reasons "$result_file")"
+
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        echo "score=$score" >> "$GITHUB_OUTPUT"
+        echo "reasons=$reasons" >> "$GITHUB_OUTPUT"
+
+        if [[ "$verdict" == "error" && "$VET_FAIL_OPEN" == "true" ]]; then
+          exit 0
+        fi
+
+        if [[ "$VET_COMMENT" == "true" && "$VET_ACTION" == "opened" ]] || \
+           [[ "$VET_COMMENT" == "true" && "$VET_ACTION" == "reopened" ]]; then
+          if [[ "$verdict" == "review_required" || "$verdict" == "blocked" ]]; then
+            jq -r '.reasons | map("- " + .) | join("\n")' "$result_file" \
+              > "$RUNNER_TEMP/pr-vetting-reasons.txt"
+            gh pr comment "$VET_PR" --repo "$VET_REPO" --body-file \
+              <(printf 'PR vetting check: %s.\\n\\n%s\\n\\nMaintainers can add the `%s` label after a manual review.' \
+                "$verdict" "$(cat "$RUNNER_TEMP/pr-vetting-reasons.txt")" "$VET_LABEL")
+          fi
+        fi
+
+        exit "$vet_status"
