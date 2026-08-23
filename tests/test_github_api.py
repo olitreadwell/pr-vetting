@@ -127,3 +127,32 @@ def test_graphql_errors_raise_api_error(monkeypatch):
     )
     with pytest.raises(github_api.GitHubApiError, match="boom"):
         github_api.fetch_commit_verification("owner", "repo", 87)
+
+
+def test_fetch_contribution_totals_parses_graphql(monkeypatch):
+    payload = {
+        "data": {
+            "user": {
+                "contributionsCollection": {
+                    "totalCommitContributions": 3,
+                    "totalPullRequestContributions": 1,
+                    "totalPullRequestReviewContributions": 2,
+                    "totalIssueContributions": 4,
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(github_api.urllib.request, "urlopen", fake_urlopen(payload))
+    totals = github_api.fetch_contribution_totals("ann")
+    assert totals == {"commits": 3, "pull_requests": 1, "reviews": 2, "issues": 4}
+
+
+def test_fetch_public_repo_footprint_counts_content_and_forks(monkeypatch):
+    payload = [
+        {"fork": False, "size": 100, "stargazers_count": 2},
+        {"fork": True, "size": 200, "stargazers_count": 0},
+        {"fork": False, "size": 0, "stargazers_count": 0},
+    ]
+    monkeypatch.setattr(github_api.urllib.request, "urlopen", fake_urlopen(payload))
+    footprint = github_api.fetch_public_repo_footprint("ann")
+    assert footprint == {"content_repo_count": 1, "fork_count": 1, "stars": 2}

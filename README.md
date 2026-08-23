@@ -31,9 +31,10 @@ All data comes from the public GitHub API. Nothing is stored.
 | Account type | `GET /users/{login}` | Bot vs User |
 | Merged PRs in repo | search API | Strongest signal, task-specific |
 | Merged PRs globally | search API | Cross-repo proof of work |
-| Commit signatures | GraphQL | Verified GPG/SSH commits |
+| Commit signatures | GraphQL | `signature.isValid` per commit |
+| Contribution totals | GraphQL | Last-year commits, PRs, reviews, issues |
+| Public repo footprint | `GET /users/{login}/repos` | Owns content vs forks and empties |
 | Org membership | `GET /users/{id}/orgs` | Harder to fake |
-| Recent activity | events API | Last 90 days |
 | Referenced issue | PR body | Issue opened by same author first |
 | Profile completeness | profile fields | bio, blog, location, email |
 

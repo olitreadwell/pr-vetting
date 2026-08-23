@@ -10,7 +10,6 @@ def make_signals(**overrides):
             "type": "User",
             "age_days": 1000,
             "org_count": 1,
-            "has_recent_event": True,
             "bio": True,
             "blog": True,
             "location": True,
@@ -22,6 +21,8 @@ def make_signals(**overrides):
             "referenced_issue_by_author": False,
         },
         "commits": {"count": 2, "verified": 2},
+        "activity": {"commits": 5, "pull_requests": 1, "reviews": 2, "issues": 1},
+        "repos": {"content_repo_count": 1, "fork_count": 0, "stars": 0},
         "meta": {"account_exists": True},
     }
     base.update(overrides)
@@ -89,3 +90,13 @@ def test_signed_commits_required_blocks_unsigned():
 def test_score_stays_in_bounds():
     result = vet_pull_author(make_signals(), VetThresholds())
     assert 0 <= result.score <= 100
+
+
+def test_zero_cross_repo_activity_gets_review_reasons():
+    signals = make_signals()
+    signals["activity"] = {"commits": 0, "pull_requests": 1, "reviews": 0, "issues": 0}
+    signals["repos"] = {"content_repo_count": 0, "fork_count": 1, "stars": 0}
+    result = vet_pull_author(signals, VetThresholds())
+    assert result.verdict == "review_required"
+    assert any("no public commit" in reason for reason in result.reasons)
+    assert any("no public repositories with content" in reason for reason in result.reasons)

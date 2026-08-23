@@ -79,17 +79,6 @@ def fetch_user_org_count(login: str, token: str | None = None) -> int:
     return len(orgs)
 
 
-def fetch_user_has_recent_event(login: str, token: str | None = None) -> bool:
-    """True when the user has at least one public event in the last 90 days."""
-    events = cast(
-        list[Any],
-        _get_json_any(
-            f"{API_BASE}/users/{urllib.parse.quote(login)}/events/public?per_page=1", token
-        ),
-    )
-    return bool(events)
-
-
 def count_author_merged_prs(owner: str, repo: str, login: str, token: str | None = None) -> int:
     """Count merged pull requests authored by a user in one repository."""
     query = f"repo:{owner}/{repo} type:pr author:{login} is:merged"
@@ -138,6 +127,52 @@ def fetch_commit_verification(
         if node["commit"].get("signature") and node["commit"]["signature"].get("isValid")
     )
     return len(commits), verified
+
+
+def fetch_contribution_totals(login: str, token: str | None = None) -> dict[str, int]:
+    """Return last-year contribution totals for a user from GraphQL."""
+    query = """
+    query($login: String!) {
+      user(login: $login) {
+        contributionsCollection {
+          totalCommitContributions
+          totalPullRequestContributions
+          totalPullRequestReviewContributions
+          totalIssueContributions
+        }
+      }
+    }
+    """
+    result = _graphql(query, {"login": login}, token)
+    user = result.get("data", {}).get("user")
+    if not user:
+        raise UserNotFoundError(f"GitHub returned no user for {login}")
+    collection = user["contributionsCollection"]
+    return {
+        "commits": int(collection["totalCommitContributions"]),
+        "pull_requests": int(collection["totalPullRequestContributions"]),
+        "reviews": int(collection["totalPullRequestReviewContributions"]),
+        "issues": int(collection["totalIssueContributions"]),
+    }
+
+
+def fetch_public_repo_footprint(login: str, token: str | None = None) -> dict[str, int]:
+    """Summarize the public repositories a user owns."""
+    repos = cast(
+        list[Any],
+        _get_json_any(f"{API_BASE}/users/{urllib.parse.quote(login)}/repos?per_page=100", token),
+    )
+    content_count = 0
+    fork_count = 0
+    stars = 0
+    for repo in repos:
+        if repo.get("fork"):
+            fork_count += 1
+            continue
+        stars += int(repo.get("stargazers_count", 0))
+        if int(repo.get("size", 0)) > 0:
+            content_count += 1
+    return {"content_repo_count": content_count, "fork_count": fork_count, "stars": stars}
 
 
 def fetch_pull_request_body(owner: str, repo: str, pr_number: int, token: str | None = None) -> str:

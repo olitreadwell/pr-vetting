@@ -56,6 +56,8 @@ def vet_pull_author(signals: dict[str, Any], thresholds: VetThresholds) -> VetRe
         reasons.append(f"{verified_count} of {commit_count} commits are signed; all must be signed")
 
     history = signals.get("history", {})
+    activity = signals.get("activity", {})
+    repos = signals.get("repos", {})
     in_repo = int(history.get("in_repo_merged_prs", 0))
     global_merged = int(history.get("global_merged_prs", 0))
     age_days = int(account.get("age_days", 0))
@@ -74,13 +76,23 @@ def vet_pull_author(signals: dict[str, Any], thresholds: VetThresholds) -> VetRe
             f"{thresholds.min_global_merged_prs}"
         )
 
+    work_activity = (
+        int(activity.get("commits", 0))
+        + int(activity.get("reviews", 0))
+        + int(activity.get("issues", 0))
+    )
+    if work_activity == 0:
+        reasons.append("no public commit, review, or issue activity in the last year")
+    if int(repos.get("content_repo_count", 0)) == 0:
+        reasons.append("owns no public repositories with content")
+
     signed_ok = verified_count >= commit_count if commit_count else True
     if in_repo >= thresholds.min_in_repo_merged_prs and signed_ok:
         if reasons:
             return VetResult("known", _compute_score(signals), reasons)
         return VetResult("established", _compute_score(signals), [])
 
-    if age_ok and (in_repo + global_merged) >= 1 and signed_ok:
+    if age_ok and (in_repo + global_merged) >= 1 and work_activity >= 1 and signed_ok:
         if reasons:
             return VetResult("known", _compute_score(signals), reasons)
         return VetResult("known", _compute_score(signals), [])
@@ -96,9 +108,18 @@ def _compute_score(signals: dict[str, Any]) -> int:
     history = signals.get("history", {})
     commits = signals.get("commits", {})
 
-    age_score = min(int(account.get("age_days", 0)) / 365 * 25, 25)
+    activity = signals.get("activity", {})
+    repos = signals.get("repos", {})
+
+    age_score = min(int(account.get("age_days", 0)) / 365 * 20, 20)
     in_repo_score = min(int(history.get("in_repo_merged_prs", 0)) * 15, 30)
     global_score = min(int(history.get("global_merged_prs", 0)) * 2, 10)
+    work_activity = (
+        int(activity.get("commits", 0))
+        + int(activity.get("reviews", 0))
+        + int(activity.get("issues", 0))
+    )
+    activity_score = min(work_activity * 3, 25)
     signed = (
         10
         if int(commits.get("count", 0)) > 0
@@ -106,7 +127,7 @@ def _compute_score(signals: dict[str, Any]) -> int:
         else 0
     )
     org_score = min(int(account.get("org_count", 0)) * 2, 5)
-    recency_score = 5 if account.get("has_recent_event") else 0
+    repo_score = 5 if int(repos.get("content_repo_count", 0)) > 0 else 0
     profile_score = 5 if _has_full_profile(account) else 0
     issue_score = 10 if history.get("referenced_issue_by_author") else 0
 
@@ -114,9 +135,10 @@ def _compute_score(signals: dict[str, Any]) -> int:
         age_score
         + in_repo_score
         + global_score
+        + activity_score
         + signed
         + org_score
-        + recency_score
+        + repo_score
         + profile_score
         + issue_score
     )

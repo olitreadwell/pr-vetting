@@ -56,7 +56,6 @@ def collect_pull_signals(ctx: PullRequestContext, token: str | None = None) -> d
             "location": bool(profile.get("location")),
             "email": bool(profile.get("email")),
             "org_count": github_api.fetch_user_org_count(ctx.login, token),
-            "has_recent_event": github_api.fetch_user_has_recent_event(ctx.login, token),
         },
         "history": {
             "in_repo_merged_prs": github_api.count_author_merged_prs(
@@ -68,6 +67,8 @@ def collect_pull_signals(ctx: PullRequestContext, token: str | None = None) -> d
             ),
         },
         "commits": {"count": commit_count, "verified": verified_count},
+        "activity": github_api.fetch_contribution_totals(ctx.login, token),
+        "repos": github_api.fetch_public_repo_footprint(ctx.login, token),
         "meta": {"account_exists": True},
     }
 
