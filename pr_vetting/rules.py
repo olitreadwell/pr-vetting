@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 PASS_VERDICTS = frozenset({"maintainer", "vetted", "established", "known"})
-BLOCK_VERDICTS = frozenset({"blocked", "review_required"})
+BLOCK_VERDICTS = frozenset({"blocked", "review_required", "dormant"})
 
 
 @dataclass(frozen=True)
@@ -101,7 +101,32 @@ def vet_pull_author(signals: dict[str, Any], thresholds: VetThresholds) -> VetRe
 
     if not reasons:
         reasons.append("no history of merged pull requests")
+    if _is_dormant(signals):
+        return VetResult("dormant", _compute_score(signals), reasons)
     return VetResult("review_required", _compute_score(signals), reasons)
+
+
+def _is_dormant(signals: dict[str, Any]) -> bool:
+    """True when the author shows no real activity anywhere.
+
+    No commits, reviews, or issues in the last year, no public
+    repository with content, and no merged pull requests anywhere.
+    This is the profile of a spam or bot account.
+    """
+    activity = signals.get("activity", {})
+    repos = signals.get("repos", {})
+    history = signals.get("history", {})
+    work_activity = (
+        int(activity.get("commits", 0))
+        + int(activity.get("reviews", 0))
+        + int(activity.get("issues", 0))
+    )
+    return (
+        work_activity == 0
+        and int(repos.get("content_repo_count", 0)) == 0
+        and int(history.get("in_repo_merged_prs", 0)) == 0
+        and int(history.get("global_merged_prs", 0)) == 0
+    )
 
 
 def _compute_score(signals: dict[str, Any]) -> int:

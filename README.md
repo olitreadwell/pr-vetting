@@ -19,6 +19,7 @@ external services, no dependencies.
 | `established` | Enough merged PRs in this repo, no open questions | pass |
 | `known` | Some history and an aged account | pass |
 | `review_required` | New or unknown author, reasons listed | fail |
+| `dormant` | No activity anywhere and no content repos; auto-close candidate | fail or close |
 | `blocked` | Missing account, bot account, or worse | fail |
 | `error` | API failure; fails unless `fail-open` is set | fail |
 
@@ -61,7 +62,7 @@ jobs:
   vet:
     runs-on: ubuntu-latest
     steps:
-      - uses: olitreadwell/pr-vetting@v0.3.4-beta.1
+      - uses: olitreadwell/pr-vetting@v0.4.0-beta.1
         id: vet
         with:
           pr-number: ${{ github.event.pull_request.number }}
@@ -110,6 +111,7 @@ API errors.
 | `allowlist` | "" | Always-pass logins; bots (login ends in `[bot]`) pass automatically |
 | `vetted-label` | vetted-contributor | Manual override label |
 | `comment-on-open` | true | Comment reasons on open |
+| `auto-close-dormant` | false | Close PRs from dormant authors (opt-in, destructive) |
 | `fail-open` | false | Pass on API errors |
 
 ## Development
@@ -139,3 +141,12 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+
+## Auto-closing dormant accounts
+
+Set `auto-close-dormant: true` to close pull requests from authors
+who show no public activity anywhere and own no public repositories
+with content. Only `dormant` verdicts are closed, and only on `opened`
+or `reopened` events. The close comment explains the appeal path: a
+maintainer adds the `vetted-contributor` label and reopens.

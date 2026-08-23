@@ -1,6 +1,6 @@
 """Tests for the verdict rules engine."""
 
-from pr_vetting.rules import VetThresholds, vet_pull_author
+from pr_vetting.rules import BLOCK_VERDICTS, VetThresholds, vet_pull_author
 
 
 def make_signals(**overrides):
@@ -92,12 +92,17 @@ def test_score_stays_in_bounds():
     assert 0 <= result.score <= 100
 
 
-def test_zero_cross_repo_activity_gets_review_reasons():
+def test_zero_cross_repo_activity_gets_dormancy_reasons():
     signals = make_signals()
     signals["activity"] = {"commits": 0, "pull_requests": 1, "reviews": 0, "issues": 0}
     signals["repos"] = {"content_repo_count": 0, "fork_count": 1, "stars": 0}
+    signals["history"] = {
+        "in_repo_merged_prs": 0,
+        "global_merged_prs": 0,
+        "referenced_issue_by_author": False,
+    }
     result = vet_pull_author(signals, VetThresholds())
-    assert result.verdict == "review_required"
+    assert result.verdict == "dormant"
     assert any("no public commit" in reason for reason in result.reasons)
     assert any("no public repositories with content" in reason for reason in result.reasons)
 
@@ -109,3 +114,30 @@ def test_automation_account_passes_without_api(monkeypatch):
     result = vet_pull_author(signals, VetThresholds())
     assert result.verdict == "maintainer"
     assert any("automation" in reason for reason in result.reasons)
+
+
+def test_dormant_account_gets_dormant_verdict():
+    signals = make_signals()
+    signals["activity"] = {"commits": 0, "pull_requests": 1, "reviews": 0, "issues": 0}
+    signals["repos"] = {"content_repo_count": 0, "fork_count": 1, "stars": 0}
+    signals["history"] = {
+        "in_repo_merged_prs": 0,
+        "global_merged_prs": 0,
+        "referenced_issue_by_author": False,
+    }
+    result = vet_pull_author(signals, VetThresholds())
+    assert result.verdict == "dormant"
+    assert "dormant" in BLOCK_VERDICTS
+
+
+def test_account_with_any_activity_is_not_dormant():
+    signals = make_signals()
+    signals["activity"] = {"commits": 1, "pull_requests": 0, "reviews": 0, "issues": 0}
+    signals["repos"] = {"content_repo_count": 0, "fork_count": 1, "stars": 0}
+    signals["history"] = {
+        "in_repo_merged_prs": 0,
+        "global_merged_prs": 0,
+        "referenced_issue_by_author": False,
+    }
+    result = vet_pull_author(signals, VetThresholds())
+    assert result.verdict == "review_required"

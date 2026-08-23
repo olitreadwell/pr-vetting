@@ -6,6 +6,17 @@ Release tags use beta suffixes until v1: `v0.3.1-beta.1`.
 
 ## [Unreleased]
 
+## [0.4.0-beta.1] - 2026-08-24
+
+### Added
+
+- `dormant` verdict: no public commit, review, or issue activity in
+  the last year, no public repository with content, and no merged pull
+  requests anywhere.
+- `auto-close-dormant` input: opt-in, closes PRs that get the
+  `dormant` verdict on `opened` or `reopened`, with an explanatory
+  comment and the appeal path (vetted label + reopen).
+
 ## [0.3.4-beta.1] - 2026-08-24
 
 ### Fixed
