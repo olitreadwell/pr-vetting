@@ -131,6 +131,10 @@ make check
 - Contributors keep the right to appeal: the label override exists for a
   reason.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
