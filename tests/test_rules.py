@@ -100,3 +100,12 @@ def test_zero_cross_repo_activity_gets_review_reasons():
     assert result.verdict == "review_required"
     assert any("no public commit" in reason for reason in result.reasons)
     assert any("no public repositories with content" in reason for reason in result.reasons)
+
+
+def test_automation_account_passes_without_api(monkeypatch):
+    signals = make_signals()
+    signals["login"] = "dependabot[bot]"
+    signals["account"]["type"] = "Bot"
+    result = vet_pull_author(signals, VetThresholds())
+    assert result.verdict == "maintainer"
+    assert any("automation" in reason for reason in result.reasons)

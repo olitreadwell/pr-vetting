@@ -40,6 +40,8 @@ def vet_pull_author(signals: dict[str, Any], thresholds: VetThresholds) -> VetRe
 
     if login in thresholds.allowlist:
         return VetResult("maintainer", 100, ["author is on the maintainer allowlist"])
+    if login.endswith("[bot]"):
+        return VetResult("maintainer", 100, ["automation account, treated as trusted tooling"])
 
     meta = signals.get("meta", {})
     if not meta.get("account_exists", True):

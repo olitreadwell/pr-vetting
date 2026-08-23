@@ -1,5 +1,8 @@
 # PR Vetting
 
+> **Beta.** The signal set and verdict rules are still settling. Pin a
+> specific tag and review the output before trusting it in production.
+
 CI-runable vetting of pull request authors. Uses only public GitHub
 signals to classify an author into a trust tier, so unknown or bot
 accounts cannot merge into your repository without a human decision.
@@ -57,7 +60,7 @@ jobs:
   vet:
     runs-on: ubuntu-latest
     steps:
-      - uses: olitreadwell/pr-vetting@v1
+      - uses: olitreadwell/pr-vetting@v0.3.0-beta.1
         id: vet
         with:
           pr-number: ${{ github.event.pull_request.number }}
@@ -103,7 +106,7 @@ API errors.
 | `min-in-repo-merged-prs` | 1 | In-repo history floor |
 | `min-global-merged-prs` | 0 | Global history floor |
 | `require-signed-commits` | false | All commits must be verified |
-| `allowlist` | "" | Always-pass logins |
+| `allowlist` | "" | Always-pass logins; bots (login ends in `[bot]`) pass automatically |
 | `vetted-label` | vetted-contributor | Manual override label |
 | `comment-on-open` | true | Comment reasons on open |
 | `fail-open` | false | Pass on API errors |
