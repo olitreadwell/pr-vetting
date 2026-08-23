@@ -131,9 +131,9 @@ runs:
               > "$RUNNER_TEMP/pr-vetting-reasons.txt"
             comment_file="$RUNNER_TEMP/pr-vetting-comment.md"
             {
-              printf 'PR vetting check: %s.\\n\\n' "$verdict"
+              printf 'PR vetting check: %s.\n\n' "$verdict"
               cat "$RUNNER_TEMP/pr-vetting-reasons.txt"
-              printf '\\nMaintainers can add the `%s` label after a manual review.\\n' "$VET_LABEL"
+              printf '\nMaintainers can add the `%s` label after a manual review.\n' "$VET_LABEL"
             } > "$comment_file"
             # Update the previous gate comment instead of stacking new ones.
             existing_id="$(gh api -X GET "repos/$VET_REPO/issues/$VET_PR/comments" \

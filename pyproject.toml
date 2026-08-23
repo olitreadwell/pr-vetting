@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pr-vetting"
-version = "0.3.3"
+version = "0.3.4"
 description = "CI-runable vetting of pull request authors from public GitHub signals"
 readme = "README.md"
 requires-python = ">=3.10"

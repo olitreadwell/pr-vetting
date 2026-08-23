@@ -6,6 +6,13 @@ Release tags use beta suffixes until v1: `v0.3.1-beta.1`.
 
 ## [Unreleased]
 
+## [0.3.4-beta.1] - 2026-08-24
+
+### Fixed
+
+- Gate comment now uses real newlines. The printf formats doubled the
+  backslashes, so the comment rendered literal `\n` between sections.
+
 ## [0.3.3-beta.1] - 2026-08-24
 
 ### Fixed
