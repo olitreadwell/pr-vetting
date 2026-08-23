@@ -90,6 +90,10 @@ runs:
         if [[ "$VET_REQUIRE_SIGNED" == "true" ]]; then
           signed_flag="--require-signed-commits"
         fi
+        fail_open_flag=""
+        if [[ "$VET_FAIL_OPEN" == "true" ]]; then
+          fail_open_flag="--fail-open"
+        fi
 
         set +e
         python3 -m pr_vetting \
@@ -102,7 +106,7 @@ runs:
           --min-global-merged-prs "$VET_MIN_GLOBAL_PRS" \
           $signed_flag \
           --allowlist "$VET_ALLOWLIST" \
-          --fail-open "$VET_FAIL_OPEN" \
+          $fail_open_flag \
           > "$result_file"
         vet_status=$?
         set -e

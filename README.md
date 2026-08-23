@@ -60,7 +60,7 @@ jobs:
   vet:
     runs-on: ubuntu-latest
     steps:
-      - uses: olitreadwell/pr-vetting@v0.3.0-beta.1
+      - uses: olitreadwell/pr-vetting@v0.3.1-beta.1
         id: vet
         with:
           pr-number: ${{ github.event.pull_request.number }}
