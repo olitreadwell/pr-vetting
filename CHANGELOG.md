@@ -6,6 +6,14 @@ Release tags use beta suffixes until v1: `v0.3.1-beta.1`.
 
 ## [Unreleased]
 
+## [0.3.3-beta.1] - 2026-08-24
+
+### Fixed
+
+- The composite action now exports `GH_TOKEN`. Without it, the `gh`
+  CLI silently failed, so gate comments never posted and the vetted
+  label check never matched.
+
 ## [0.3.2-beta.1] - 2026-08-24
 
 ### Fixed

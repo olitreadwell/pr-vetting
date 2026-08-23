@@ -58,6 +58,7 @@ runs:
       id: vet
       shell: bash
       env:
+        GH_TOKEN: ${{ inputs.token }}
         VET_TOKEN: ${{ inputs.token }}
         VET_REPO: ${{ inputs.repo }}
         VET_PR: ${{ inputs.pr-number }}
