@@ -6,6 +6,13 @@ Release tags use beta suffixes until v1: `v0.3.1-beta.1`.
 
 ## [Unreleased]
 
+## [0.4.1-beta.1] - 2026-08-24
+
+### Fixed
+
+- Auto-close now updates the existing `PR vetting check:` comment
+  before closing, instead of posting a second one.
+
 ## [0.4.0-beta.1] - 2026-08-24
 
 ### Added
