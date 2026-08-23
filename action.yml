@@ -128,9 +128,22 @@ runs:
           if [[ "$verdict" == "review_required" || "$verdict" == "blocked" ]]; then
             jq -r '.reasons | map("- " + .) | join("\n")' "$result_file" \
               > "$RUNNER_TEMP/pr-vetting-reasons.txt"
-            gh pr comment "$VET_PR" --repo "$VET_REPO" --body-file \
-              <(printf 'PR vetting check: %s.\\n\\n%s\\n\\nMaintainers can add the `%s` label after a manual review.' \
-                "$verdict" "$(cat "$RUNNER_TEMP/pr-vetting-reasons.txt")" "$VET_LABEL")
+            comment_file="$RUNNER_TEMP/pr-vetting-comment.md"
+            {
+              printf 'PR vetting check: %s.\\n\\n' "$verdict"
+              cat "$RUNNER_TEMP/pr-vetting-reasons.txt"
+              printf '\\nMaintainers can add the `%s` label after a manual review.\\n' "$VET_LABEL"
+            } > "$comment_file"
+            # Update the previous gate comment instead of stacking new ones.
+            existing_id="$(gh api -X GET "repos/$VET_REPO/issues/$VET_PR/comments" \
+              --jq '[.[] | select(.body | contains("PR vetting check:"))] |
+                     if length > 0 then .[-1].id else empty end')"
+            if [[ -n "$existing_id" ]]; then
+              gh api -X PATCH "repos/$VET_REPO/issues/comments/$existing_id" \
+                -f "body=$(cat "$comment_file")" >/dev/null
+            else
+              gh pr comment "$VET_PR" --repo "$VET_REPO" --body-file "$comment_file"
+            fi
           fi
         fi
 

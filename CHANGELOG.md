@@ -6,6 +6,15 @@ Release tags use beta suffixes until v1: `v0.3.1-beta.1`.
 
 ## [Unreleased]
 
+## [0.3.2-beta.1] - 2026-08-24
+
+### Fixed
+
+- Gate comments no longer stack. The action updates its previous
+  `PR vetting check:` comment in place, or creates one if none exists.
+  The comment body is written to a temp file instead of a process
+  substitution, which `gh` could not read reliably.
+
 ## [0.3.1-beta.1] - 2026-08-24
 
 ### Fixed
