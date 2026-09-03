@@ -10,3 +10,8 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+
+# Keep npm-only template gates out of this Python action repo
+.husky/
+.github/workflows/security.yml
+.github/workflows/release.yml
