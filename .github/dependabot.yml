@@ -1,15 +1,24 @@
 version: 2
-
 updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: weekly
-    groups:
-      dev-dependencies:
-        patterns: ["*"]
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: weekly
+- package-ecosystem: pip
+  directory: /
+  schedule:
+    interval: weekly
+  groups:
+    dev-dependencies:
+      patterns:
+      - "*"
+      update-types:
+      - patch
+      - minor
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+  groups:
+    all-dependencies:
+      patterns:
+      - "*"
+      update-types:
+      - patch
+      - minor
