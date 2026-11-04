@@ -1,3 +1,5 @@
+Read `CODING_STANDARDS.md` and `AGENTS.md` before changing behaviour.
+
 # CLAUDE.md
 
 Stack-specific notes for this template.
